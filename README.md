@@ -7,10 +7,10 @@
   **Tool used:** SQL (Google BigQuery)
   
   ## 📑 Table of Contents
-  - [📌 Background & Overview](#background--overview)
-  - [📂 Dataset Description & Data Structure](#dataset-description--data-structure)
+  - [📌 Background & Overview](#-background--overview)
+  - [📂 Dataset Description & Data Structure](#-dataset-description--data-structure)
   - [⚒️ Process](#process)
-  - [🔎 Final Conclusion & Recommendations](#final-conclusion--recommendations)
+  - [🔎 Final Conclusion & Recommendations](#-final-conclusion--recommendations)
   
   
   ## 📌 Background & Overview
