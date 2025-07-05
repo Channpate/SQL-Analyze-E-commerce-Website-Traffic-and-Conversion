@@ -30,9 +30,57 @@
   ## 📂 Dataset Description & Data Structure
 
   ### Data source
-
+  * Source: The dataset is taken from **Google BigQuery Public Datasets**, specifically **Google Analytics 360** data.
+  * Size: The dataset includes **a table for each day** (daily tables), with the table name format: `ga_sessions_YYYYMMDD`. The number of rows varies depending on the day, each row corresponding to **a session**. Each table contains hundreds of thousands to millions of rows, with more than **20 data fields**, including **nested fields**.
+  * Format: The data is in **SQL table** format on BigQuery. The fields have diverse data types such as `STRING`, `INTEGER`, and `RECORD` (nested structure).
+    
   ### Data Structure & Relationships
+  **1. Tables Used:**
   
+Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYMMDD`. There is also a **temporary intraday table** named `ga_sessions_intraday_YYYYMMDD` – but this data is usually only used for the current day and will be deleted after the daily data is completed.
+
+ In a project, you can **query multiple tables using wildcards (`ga_sessions_*`) or use tables that represent specific days.**
+  
+  **2. Table Schema & Data Snapshot:**
+  
+  The dataset **is not split into multiple tables** with foreign key relationships as in a normal relational system. Instead, **the data is in a single table per day**, with nested fields to represent internal relationships (e.g. between sessions and detailed metrics).
+  
+  | Field Name | Data Type | Description |
+|------------|-----------|-------------|
+| fullVisitorId | STRING | The unique visitor ID. |
+| date | STRING | The date of the session in YYYYMMDD format. |
+| totals | RECORD | This section contains aggregate values across the session. |
+| totals.bounces | INTEGER | Total bounces (for convenience). For a bounced session, the value is 1, otherwise it is null. |
+| totals.hits | INTEGER | Total number of hits within the session. |
+| totals.pageviews | INTEGER | Total number of pageviews within the session. |
+| totals.visits | INTEGER | The number of sessions (for convenience). This value is 1 for sessions with interaction events. The value is null if there are no interaction events in the session. |
+| totals.transactions | INTEGER | Total number of ecommerce transactions within the session. |
+| trafficSource.source | STRING | The source of the traffic source. Could be the name of the search engine, the referring hostname, or a value of the utm_source URL parameter. |
+| hits | RECORD | This row and nested fields are populated for any and all types of hits. |
+| hits.eCommerceAction | RECORD | This section contains all of the ecommerce hits that occurred during the session. This is a repeated field and has an entry for each hit that was collected. |
+| hits.eCommerceAction.action_type | STRING | The action type. Click through of product lists = 1, Product detail views = 2, Add product(s) to cart = 3, Remove product(s) from cart = 4, Check out = 5, Completed purchase = 6, Refund of purchase = 7, Checkout options = 8, Unknown = 0. Usually this action type applies to all the products in a hit, with the following exception: when hits.product.isImpression = TRUE, the corresponding product is a product impression that is seen while the product action is taking place (i.e., a "product in list view"). |
+| hits.product | RECORD | This row and nested fields will be populated for each hit that contains Enhanced Ecommerce PRODUCT data. |
+| hits.product.productQuantity | INTEGER | The quantity of the product purchased. |
+| hits.product.productRevenue | INTEGER | The revenue of the product, expressed as the value passed to Analytics multiplied by 10^6 (e.g., 2.40 would be given as 2400000). |
+| hits.product.productSKU | STRING | Product SKU. |
+| hits.product.v2ProductName | STRING | Product Name. |
+
+**Data preview**
+  
+| #  | fullVisitorId       | date     | bounces | hits | pageviews | visits | transactions | source | action_type | productQuantity | productRevenue | productSKU         | v2ProductName                                 |
+|----|----------------------|----------|---------|------|------------|--------|---------------|--------|--------------|------------------|----------------|---------------------|------------------------------------------------|
+| 1  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGKWQ060910     | Google Bib White                             
+| 2  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGKWR060810     | Google Bib Red                               
+| 3  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0651       | Google Toddler Short Sleeve Tee Red          
+| 4  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0680       | Google Youth Baseball Raglan Heather/Black   
+| 5  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0661       | You Tube Toddler Short Sleeve Tee Red        
+| 6  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0610       | Google Onesie Red/Graphite                   
+| 7  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0617       | Android Onesie Gold                          
+| 8  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0618       | Google Infant Short Sleeve Tee Red           
+| 9  | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0619       | Google Infant Short Sleeve Tee Royal Blue    
+| 10 | 5363034362387281051 | 20170727 | null    | 16   | 15         | 1      | null          | google | 0            | null             | null           | GGOEGAAX0620       | Google Infant Short Sleeve Tee Green         
+
+
   ## ⚒️ Process
   ### Query 1: Analyze **total visit, pageview, transaction** for Q1/2017 (Jan,Feb,Mar) (order by month)
   #### Code:
@@ -322,19 +370,19 @@ FROM product_data;
   ## 🔎 Final Conclusion & Recommendations
   From the eight analytical questions run against user behavior and performance data on an e-commerce website, key findings were identified:
   
-  1. Traffic & Engagement Trends
+  **1. Traffic & Engagement Trends**
   * Visits, pageviews, and transactions increased steadily across Q1/2017, with March being the highlight month, reflecting solid momentum across customer engagement and purchasing behavior.
   * Direct and Google sources drove most traffic and revenue, with social and referral sources showing high bounce and low conversion rates.
   
-  2. User Behavior & Conversion Funnel
+  **2. User Behavior & Conversion Funnel**
   * Buyers looked at fewer pages than non-buyers, indicating increased goal-oriented activity in converting users.
   * The average user who made a purchase during July placed over 4 purchases and spent $43.85 per session—indicating high involvement by buyers.
   * Funnel performance increased across the months: product view → add to cart → buy rates all increased from January to March.
   
-  3. Product Performance
+  **3. Product Performance**
   * Certain items, such as "Google Sunglasses," tended to be purchased in conjunction with other items, and hence offered clear cross-sell opportunities.
   
-  4. Recommendations
+  **4. Recommendations**
   *  Invest more marketing spend in Direct and Google channels, both of which produce high traffic and revenue with good bounce rates.
   *  Address YouTube, Facebook, and other referral channel high bounce rates with landing page optimization and targeting more intentful segments.
   *  Deploy product bundles or recommendation widgets on highly co-bought products to increase average order value.
