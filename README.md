@@ -112,6 +112,7 @@ Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYM
   
   #### Code:
   ``` sql
+  -- calculate metrics group by source
   WITH group_by_source AS (
       SELECT trafficSource.source
         , SUM(totals.bounces) total_no_of_bounces
@@ -119,6 +120,7 @@ Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYM
       FROM `bigquery-public-data.google_analytics_sample.ga_sessions_201707*`
       GROUP BY trafficSource.source
   )
+  -- round up result and sort
   SELECT *
         , ROUND(total_no_of_bounces*100.0/total_visits,3) bounce_rate
   FROM group_by_source
@@ -143,6 +145,7 @@ Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYM
   ### Query 3: Revenue by traffic source by week, by month in June 2017
   #### Code:
   ``` sql
+  -- calculate revenue by traffic source by month
   SELECT 'Month' time_type
         , FORMAT_DATE('%Y%m',PARSE_DATE('%Y%m%d', date)) time
         , trafficSource.source source
@@ -150,11 +153,11 @@ Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYM
   FROM `bigquery-public-data.google_analytics_sample.ga_sessions_201706*`
       , UNNEST(hits) hits
       , UNNEST(hits.product) product
-  WHERE product.productRevenue IS NOT NULL
+  WHERE product.productRevenue IS NOT NULL -- filter products that have revenue
   GROUP BY FORMAT_DATE('%Y%m',PARSE_DATE('%Y%m%d', date))
           ,trafficSource.source
     
-  UNION ALL
+  UNION ALL -- merge with week data
     
   SELECT 'Week' time_type
         , FORMAT_DATE('%Y%W',PARSE_DATE('%Y%m%d', date)) time
@@ -191,6 +194,8 @@ Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYM
   ### Query 4: Average number of pageviews by purchaser type (purchasers vs non-purchasers) in June, July 2017.
   #### Code:
   ``` sql
+  -- calculates the average pageviews per user 
+  -- for users who made at least one purchase and generated revenue.
   WITH purchaser_data AS (
   SELECT
     FORMAT_DATE('%Y%m', PARSE_DATE('%Y%m%d', date)) AS month,
@@ -207,6 +212,7 @@ Each day corresponds to **a data table**, named in the format `ga_sessions_YYYYM
     month
 ),
 
+-- users who did not make any purchases and had no revenue.
 non_purchaser_data AS (
   SELECT
     FORMAT_DATE('%Y%m', PARSE_DATE('%Y%m%d', date)) AS month,
@@ -223,6 +229,7 @@ non_purchaser_data AS (
     month
 )
 
+-- full join 2 CTEs 
 SELECT
   pd.month,
   pd.avg_pageviews_purchase,
@@ -249,6 +256,8 @@ ORDER BY
   ### Query 5: Average number of transactions per user that purchased in July 2017
   #### Code:
   ``` sql
+  -- filter sessions in July 2017 where a transaction occurred and product revenue is recorded
+  -- group data by date and calculate Avg_total_transactions_per_user
   SELECT FORMAT_DATE('%Y%m',PARSE_DATE('%Y%m%d', date)) month
         , ROUND(
                 SUM(totals.transactions)/COUNT(distinct fullVisitorId)
@@ -289,6 +298,7 @@ ORDER BY
   Output will show product name and the quantity was ordered.
   #### Code:
   ``` sql
+  -- users who purchased the product YouTube Men's Vintage Henley in July 2017
   WITH buyer_list AS (
     SELECT
         distinct fullVisitorId  
@@ -300,6 +310,8 @@ ORDER BY
     AND product.productRevenue is not null
 )
 
+-- query all other purchases by those users, excluding the Henley purchases
+-- group by product name and sum up quantities
 SELECT
   product.v2ProductName AS other_purchased_products,
   SUM(product.productQuantity) AS quantity
@@ -335,6 +347,7 @@ ORDER BY quantity DESC;
   Purchase_rate = number product purchase/number product view. 
   #### Code:
   ``` sql
+-- count product-level actions per month based on action type
   WITH product_data AS (
 SELECT 
     FORMAT_DATE('%Y%m', parse_date('%Y%m%d',date)) AS month,
@@ -350,6 +363,7 @@ GROUP BY month
 ORDER BY month
 )
 
+-- calculate two rates
 SELECT 
     *,
     ROUND(num_add_to_cart/num_product_view * 100, 2) AS add_to_cart_rate,
